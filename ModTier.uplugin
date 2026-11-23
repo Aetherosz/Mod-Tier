@@ -1,0 +1,29 @@
+{
+	"FileVersion": 3,
+	"Version": 0,
+	"VersionName": "0.1.0",
+	"SemVersion": "0.1.0",
+	"GameVersion": ">=520140",
+	"FriendlyName": "Mod Tier",
+	"Description": "Moves the milestones added by mods to their own tab in the HUB.",
+	"Category": "Modding",
+	"CreatedBy": "Aetherosz",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "ModTier",
+			"Type": "Runtime",
+			"LoadingPhase": "PostDefault"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "SML",
+			"Enabled": true,
+			"SemVersion": "^3.12.1"
+		}
+	]
+}
