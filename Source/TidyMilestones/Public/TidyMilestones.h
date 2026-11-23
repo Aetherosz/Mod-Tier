@@ -19,7 +19,7 @@ struct FFrame;
  * Those three functions get a replacement Blueprint entry point that answers differently when,
  * and only when, the HUB's widgets are the caller. Calls from C++ and other Blueprints are untouched.
  */
-class FModTier
+class FTidyMilestones
 {
 public:
 	static void RegisterHooks();

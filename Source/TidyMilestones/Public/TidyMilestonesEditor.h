@@ -6,7 +6,7 @@ class APlayerController;
 class SWidget;
 
 /** The in-game window for replacing names and icons. Opened and closed with Ctrl+Shift+M. */
-class FModTierEditor
+class FTidyMilestonesEditor
 {
 public:
 	static void Open(APlayerController* Player);

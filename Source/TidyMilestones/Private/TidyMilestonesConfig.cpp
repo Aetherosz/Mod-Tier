@@ -1,4 +1,4 @@
-#include "ModTierConfig.h"
+#include "TidyMilestonesConfig.h"
 
 #include "Configuration/Properties/ConfigPropertyBool.h"
 #include "Configuration/Properties/ConfigPropertyInteger.h"
@@ -7,25 +7,25 @@
 #include "Configuration/Properties/WidgetExtension/CP_Integer.h"
 #include "Configuration/Properties/WidgetExtension/CP_Section.h"
 
-#define LOCTEXT_NAMESPACE "ModTier"
+#define LOCTEXT_NAMESPACE "TidyMilestones"
 
-const FString UModTierConfig::TabKey = TEXT("ModTierTab");
-const FString UModTierConfig::LabelKey = TEXT("TierLabel");
-const FString UModTierConfig::DefaultLabel = TEXT("M");
-const FString UModTierConfig::LeftKey = TEXT("TierOnLeft");
-const FString UModTierConfig::ShowAllKey = TEXT("ShowAllAtOnce");
-const FString UModTierConfig::OverridesKey = TEXT("NamesAndIcons");
-const FString UModTierConfig::EditorKeyKey = TEXT("EditorKey");
+const FString UTidyMilestonesConfig::TabKey = TEXT("ModTierTab");
+const FString UTidyMilestonesConfig::LabelKey = TEXT("TierLabel");
+const FString UTidyMilestonesConfig::DefaultLabel = TEXT("M");
+const FString UTidyMilestonesConfig::LeftKey = TEXT("TierOnLeft");
+const FString UTidyMilestonesConfig::ShowAllKey = TEXT("ShowAllAtOnce");
+const FString UTidyMilestonesConfig::OverridesKey = TEXT("NamesAndIcons");
+const FString UTidyMilestonesConfig::EditorKeyKey = TEXT("EditorKey");
 
-FConfigId UModTierConfig::GetId()
+FConfigId UTidyMilestonesConfig::GetId()
 {
 	FConfigId Id;
-	Id.ModReference = TEXT("ModTier");
+	Id.ModReference = TEXT("TidyMilestones");
 	Id.ConfigCategory = TEXT("");
 	return Id;
 }
 
-UModTierConfig::UModTierConfig()
+UTidyMilestonesConfig::UTidyMilestonesConfig()
 {
 	ConfigId = GetId();
 	DisplayName = LOCTEXT("ConfigName", "Tidy Milestones & OCD Tweaks");
@@ -79,7 +79,7 @@ UModTierConfig::UModTierConfig()
 	UConfigPropertyInteger* EditorKey = CreateDefaultSubobject<UConfigPropertyInteger>(TEXT("EditorKey"));
 	EditorKey->DisplayName = LOCTEXT("EditorKeyName", "Names and icons window");
 	EditorKey->Tooltip = LOCTEXT("EditorKeyTooltip", "The keys that open and close the window for changing names and icons, in a loaded save.");
-	EditorKey->DefaultValue = static_cast<int32>(EModTierEditorKey::CtrlShiftM);
+	EditorKey->DefaultValue = static_cast<int32>(ETidyMilestonesEditorKey::CtrlShiftM);
 	EditorKey->Value = EditorKey->DefaultValue;
 	EditorKey->bRequiresWorldReload = false;
 	RootSection->SectionProperties.Add(EditorKeyKey, EditorKey);
@@ -100,7 +100,7 @@ namespace
 			*FString::Printf(TEXT("/SML/Interface/UI/Menu/Mods/ConfigProperties/%s.%s_C"), BlueprintName, BlueprintName)) : nullptr;
 		if (!BlueprintClass)
 		{
-			UE_LOG(LogTemp, Error, TEXT("ModTier: no menu widget for %s, the config menu will be incomplete"), *NativeClass->GetName());
+			UE_LOG(LogTemp, Error, TEXT("TidyMilestones: no menu widget for %s, the config menu will be incomplete"), *NativeClass->GetName());
 			return Native;
 		}
 
@@ -124,9 +124,9 @@ namespace
 			{
 				// The only integer is the key choice: a dropdown. SML's default is a text box.
 				Widget->WidgetType = ECP_IntegerWidgetType::CPI_Enum;
-				Widget->EnumClass = StaticEnum<EModTierEditorKey>();
+				Widget->EnumClass = StaticEnum<ETidyMilestonesEditorKey>();
 				Widget->MinValue = 0;
-				Widget->MaxValue = static_cast<int32>(EModTierEditorKey::Off);
+				Widget->MaxValue = static_cast<int32>(ETidyMilestonesEditorKey::Off);
 			}
 		}
 		else if (const UConfigPropertyBool* Bool = Cast<UConfigPropertyBool>(Native))
@@ -160,22 +160,22 @@ namespace
 	/** Shipping builds have no UMETA display names, so without this the dropdown shows "CtrlShiftM". */
 	FText GetEditorKeyDisplayName(int32 Index)
 	{
-		switch (static_cast<EModTierEditorKey>(Index))
+		switch (static_cast<ETidyMilestonesEditorKey>(Index))
 		{
-		case EModTierEditorKey::CtrlShiftM: return LOCTEXT("KeyM", "Ctrl + Shift + M");
-		case EModTierEditorKey::CtrlShiftN: return LOCTEXT("KeyN", "Ctrl + Shift + N");
-		case EModTierEditorKey::CtrlShiftK: return LOCTEXT("KeyK", "Ctrl + Shift + K");
-		case EModTierEditorKey::Off: return LOCTEXT("KeyOff", "No key");
+		case ETidyMilestonesEditorKey::CtrlShiftM: return LOCTEXT("KeyM", "Ctrl + Shift + M");
+		case ETidyMilestonesEditorKey::CtrlShiftN: return LOCTEXT("KeyN", "Ctrl + Shift + N");
+		case ETidyMilestonesEditorKey::CtrlShiftK: return LOCTEXT("KeyK", "Ctrl + Shift + K");
+		case ETidyMilestonesEditorKey::Off: return LOCTEXT("KeyOff", "No key");
 		}
 		return FText::GetEmpty();
 	}
 }
 
-void UModTierConfig::UseMenuWidgets()
+void UTidyMilestonesConfig::UseMenuWidgets()
 {
-	StaticEnum<EModTierEditorKey>()->SetEnumDisplayNameFn(&GetEditorKeyDisplayName);
+	StaticEnum<ETidyMilestonesEditorKey>()->SetEnumDisplayNameFn(&GetEditorKeyDisplayName);
 
-	UModTierConfig* Default = GetMutableDefault<UModTierConfig>();
+	UTidyMilestonesConfig* Default = GetMutableDefault<UTidyMilestonesConfig>();
 	if (Default->RootSection)
 	{
 		Default->RootSection = CastChecked<UConfigPropertySection>(ToMenuProperty(Default->RootSection, Default, FString()));
