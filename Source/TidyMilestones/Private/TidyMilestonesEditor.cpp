@@ -1,6 +1,6 @@
-#include "ModTierEditor.h"
+#include "TidyMilestonesEditor.h"
 
-#include "ModTierOverrides.h"
+#include "TidyMilestonesOverrides.h"
 
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
@@ -22,8 +22,8 @@
 #include "Widgets/Views/STableRow.h"
 #include "Widgets/Views/STileView.h"
 
-TSharedPtr<SWidget> FModTierEditor::ViewportContent;
-TWeakObjectPtr<APlayerController> FModTierEditor::OwningPlayer;
+TSharedPtr<SWidget> FTidyMilestonesEditor::ViewportContent;
+TWeakObjectPtr<APlayerController> FTidyMilestonesEditor::OwningPlayer;
 
 namespace
 {
@@ -40,17 +40,17 @@ namespace
 	/** A row of the list on the left: a target with the brush its icon is drawn with. */
 	struct FTargetRow
 	{
-		TSharedPtr<FModTierTarget> Target;
+		TSharedPtr<FTidyMilestonesTarget> Target;
 		FText Name;
 		FSlateBrush Brush;
 
 		void Refresh()
 		{
 			const UClass* Class = Target->Class.Get();
-			Name = Class ? FModTierOverrides::GetDisplayName(Class) : FText::GetEmpty();
+			Name = Class ? FTidyMilestonesOverrides::GetDisplayName(Class) : FText::GetEmpty();
 			Brush = FSlateBrush();
 			Brush.ImageSize = FVector2D(64., 64.);
-			UTexture2D* Icon = Class ? FModTierOverrides::GetIcon(Class->GetDefaultObject()) : nullptr;
+			UTexture2D* Icon = Class ? FTidyMilestonesOverrides::GetIcon(Class->GetDefaultObject()) : nullptr;
 			if (Icon)
 			{
 				Brush.SetResourceObject(Icon);
@@ -74,10 +74,10 @@ namespace
 		FSlateBrush Brush;
 	};
 
-	class SModTierEditor : public SCompoundWidget
+	class STidyMilestonesEditor : public SCompoundWidget
 	{
 	public:
-		SLATE_BEGIN_ARGS(SModTierEditor) {}
+		SLATE_BEGIN_ARGS(STidyMilestonesEditor) {}
 		SLATE_END_ARGS()
 
 		void Construct(const FArguments& Args)
@@ -102,7 +102,7 @@ namespace
 						]
 						+ SHorizontalBox::Slot().AutoWidth()
 						[
-							MakeButton(TEXT("Close"), FOnClicked::CreateLambda([]() { FModTierEditor::Close(); return FReply::Handled(); }))
+							MakeButton(TEXT("Close"), FOnClicked::CreateLambda([]() { FTidyMilestonesEditor::Close(); return FReply::Handled(); }))
 						]
 					]
 					+ SVerticalBox::Slot().FillHeight(1.f)
@@ -124,7 +124,7 @@ namespace
 		{
 			if (KeyEvent.GetKey() == EKeys::Escape)
 			{
-				FModTierEditor::Close();
+				FTidyMilestonesEditor::Close();
 				return FReply::Handled();
 			}
 			return FReply::Unhandled();
@@ -146,7 +146,7 @@ namespace
 				];
 		}
 
-		TSharedRef<SWidget> MakeToggle(const TCHAR* Label, bool& bValue, void (SModTierEditor::*OnChanged)())
+		TSharedRef<SWidget> MakeToggle(const TCHAR* Label, bool& bValue, void (STidyMilestonesEditor::*OnChanged)())
 		{
 			bool* Value = &bValue;
 			return SNew(SCheckBox)
@@ -189,24 +189,24 @@ namespace
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 8.f)
 				[
 					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Milestones"), bShowMilestones, &SModTierEditor::RefreshTargetList) ]
-					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("MAM"), bShowResearch, &SModTierEditor::RefreshTargetList) ]
-					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Items"), bShowItems, &SModTierEditor::RefreshTargetList) ]
-					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Other"), bShowOther, &SModTierEditor::RefreshTargetList) ]
+					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Milestones"), bShowMilestones, &STidyMilestonesEditor::RefreshTargetList) ]
+					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("MAM"), bShowResearch, &STidyMilestonesEditor::RefreshTargetList) ]
+					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Items"), bShowItems, &STidyMilestonesEditor::RefreshTargetList) ]
+					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Other"), bShowOther, &STidyMilestonesEditor::RefreshTargetList) ]
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 8.f)
 				[
 					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Changed only"), bChangedOnly, &SModTierEditor::RefreshTargetList) ]
-					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Base game too"), bShowBaseGame, &SModTierEditor::RefreshTargetList) ]
+					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Changed only"), bChangedOnly, &STidyMilestonesEditor::RefreshTargetList) ]
+					+ SHorizontalBox::Slot().AutoWidth()[ MakeToggle(TEXT("Base game too"), bShowBaseGame, &STidyMilestonesEditor::RefreshTargetList) ]
 				]
 				+ SVerticalBox::Slot().FillHeight(1.f)
 				[
 					SAssignNew(TargetList, SListView<TSharedPtr<FTargetRow>>)
 					.ListItemsSource(&VisibleRows)
 					.SelectionMode(ESelectionMode::Single)
-					.OnGenerateRow(this, &SModTierEditor::MakeTargetRow)
-					.OnSelectionChanged(this, &SModTierEditor::OnTargetSelected)
+					.OnGenerateRow(this, &STidyMilestonesEditor::MakeTargetRow)
+					.OnSelectionChanged(this, &STidyMilestonesEditor::OnTargetSelected)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f, 0.f, 0.f)
 				[
@@ -217,9 +217,9 @@ namespace
 
 		TSharedRef<ITableRow> MakeTargetRow(TSharedPtr<FTargetRow> Row, const TSharedRef<STableViewBase>& Owner)
 		{
-			const TCHAR* Kind = Row->Target->Kind == EModTierTargetKind::Milestone ? TEXT("Milestone")
-				: Row->Target->Kind == EModTierTargetKind::Research ? TEXT("MAM")
-				: Row->Target->Kind == EModTierTargetKind::Item ? TEXT("Item") : TEXT("Other");
+			const TCHAR* Kind = Row->Target->Kind == ETidyMilestonesTargetKind::Milestone ? TEXT("Milestone")
+				: Row->Target->Kind == ETidyMilestonesTargetKind::Research ? TEXT("MAM")
+				: Row->Target->Kind == ETidyMilestonesTargetKind::Item ? TEXT("Item") : TEXT("Other");
 			const FString Source = Row->Target->Mod.IsEmpty() ? TEXT("Base game") : Row->Target->Mod;
 			return SNew(STableRow<TSharedPtr<FTargetRow>>, Owner)
 				.Padding(FMargin(2.f))
@@ -251,9 +251,9 @@ namespace
 
 		void GatherRows()
 		{
-			TArray<TSharedPtr<FModTierTarget>> Targets;
-			FModTierOverrides::GatherTargets(Targets);
-			for (const TSharedPtr<FModTierTarget>& Target : Targets)
+			TArray<TSharedPtr<FTidyMilestonesTarget>> Targets;
+			FTidyMilestonesOverrides::GatherTargets(Targets);
+			for (const TSharedPtr<FTidyMilestonesTarget>& Target : Targets)
 			{
 				const TSharedPtr<FTargetRow> Row = MakeShared<FTargetRow>();
 				Row->Target = Target;
@@ -272,11 +272,11 @@ namespace
 			VisibleRows.Reset();
 			for (const TSharedPtr<FTargetRow>& Row : AllRows)
 			{
-				const FModTierTarget& Target = *Row->Target;
-				const bool bKind = Target.Kind == EModTierTargetKind::Milestone ? bShowMilestones
-					: Target.Kind == EModTierTargetKind::Research ? bShowResearch
-					: Target.Kind == EModTierTargetKind::Item ? bShowItems : bShowOther;
-				const bool bChanged = !FModTierOverrides::GetNameOverride(Target.Path).IsEmpty() || !FModTierOverrides::GetIconOverride(Target.Path).IsEmpty();
+				const FTidyMilestonesTarget& Target = *Row->Target;
+				const bool bKind = Target.Kind == ETidyMilestonesTargetKind::Milestone ? bShowMilestones
+					: Target.Kind == ETidyMilestonesTargetKind::Research ? bShowResearch
+					: Target.Kind == ETidyMilestonesTargetKind::Item ? bShowItems : bShowOther;
+				const bool bChanged = !FTidyMilestonesOverrides::GetNameOverride(Target.Path).IsEmpty() || !FTidyMilestonesOverrides::GetIconOverride(Target.Path).IsEmpty();
 				if (bChangedOnly && !bChanged)
 				{
 					continue;
@@ -306,7 +306,7 @@ namespace
 			if (Row.IsValid())
 			{
 				// Offer the icons that fit: the HUB and the MAM draw theirs as flat shapes, items are in colour.
-				IconSource = Row->Target->Kind == EModTierTargetKind::Item ? EIconSource::Items : EIconSource::Unlocks;
+				IconSource = Row->Target->Kind == ETidyMilestonesTargetKind::Item ? EIconSource::Items : EIconSource::Unlocks;
 				RefreshIconList();
 			}
 			if (NameBox.IsValid())
@@ -348,18 +348,18 @@ namespace
 							.HintText(FText::FromString(TEXT("Name (Enter to apply)")))
 							.Font(Font(12))
 							.IsEnabled_Lambda([this]() { return Selected.IsValid(); })
-							.OnTextCommitted(this, &SModTierEditor::OnNameCommitted)
+							.OnTextCommitted(this, &STidyMilestonesEditor::OnNameCommitted)
 						]
 						+ SVerticalBox::Slot().AutoHeight()
 						[
 							SNew(SHorizontalBox)
 							+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 6.f, 0.f)
 							[
-								MakeButton(TEXT("Original name"), FOnClicked::CreateSP(this, &SModTierEditor::OnResetName))
+								MakeButton(TEXT("Original name"), FOnClicked::CreateSP(this, &STidyMilestonesEditor::OnResetName))
 							]
 							+ SHorizontalBox::Slot().AutoWidth()
 							[
-								MakeButton(TEXT("Original icon"), FOnClicked::CreateSP(this, &SModTierEditor::OnResetIcon))
+								MakeButton(TEXT("Original icon"), FOnClicked::CreateSP(this, &STidyMilestonesEditor::OnResetIcon))
 							]
 						]
 					]
@@ -390,8 +390,8 @@ namespace
 					.ItemWidth(76.f)
 					.ItemHeight(76.f)
 					.SelectionMode(ESelectionMode::Single)
-					.OnGenerateTile(this, &SModTierEditor::MakeIconTile)
-					.OnSelectionChanged(this, &SModTierEditor::OnIconSelected)
+					.OnGenerateTile(this, &STidyMilestonesEditor::MakeIconTile)
+					.OnSelectionChanged(this, &STidyMilestonesEditor::OnIconSelected)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f, 0.f, 0.f)
 				[
@@ -399,7 +399,7 @@ namespace
 					.Text_Lambda([this]()
 					{
 						return FText::FromString(IconSource == EIconSource::Files
-							? FString::Printf(TEXT("PNG files in %s. Reopen this window after adding files."), *(FModTierOverrides::GetDirectory() / TEXT("Icons")))
+							? FString::Printf(TEXT("PNG files in %s. Reopen this window after adding files."), *(FTidyMilestonesOverrides::GetDirectory() / TEXT("Icons")))
 							: FString(TEXT("Milestone and MAM icons are drawn as flat white shapes by the game; item icons keep their colours.")));
 					})
 				]);
@@ -462,16 +462,16 @@ namespace
 				// ResolveIcon gives the icon it came with, also when it has been replaced.
 				const FString Spec = TEXT("copy:") + Row->Target->Path;
 				AddIconChoice(Spec, Row->Name.ToString(),
-					Row->Target->Kind == EModTierTargetKind::Item ? EIconSource::Items
-					: Row->Target->Kind == EModTierTargetKind::Other ? EIconSource::Shop : EIconSource::Unlocks,
-					FModTierOverrides::ResolveIcon(Spec), Seen);
+					Row->Target->Kind == ETidyMilestonesTargetKind::Item ? EIconSource::Items
+					: Row->Target->Kind == ETidyMilestonesTargetKind::Other ? EIconSource::Shop : EIconSource::Unlocks,
+					FTidyMilestonesOverrides::ResolveIcon(Spec), Seen);
 			}
 			TArray<FString> Files;
-			FModTierOverrides::GetIconFiles(Files);
+			FTidyMilestonesOverrides::GetIconFiles(Files);
 			for (const FString& File : Files)
 			{
 				const FString Spec = TEXT("file:") + File;
-				AddIconChoice(Spec, File, EIconSource::Files, FModTierOverrides::ResolveIcon(Spec), Seen);
+				AddIconChoice(Spec, File, EIconSource::Files, FTidyMilestonesOverrides::ResolveIcon(Spec), Seen);
 			}
 		}
 
@@ -496,7 +496,7 @@ namespace
 		{
 			if (Choice.IsValid() && Selected.IsValid() && SelectInfo != ESelectInfo::Direct)
 			{
-				FModTierOverrides::SetIconOverride(Selected->Target->Path, Choice->Spec);
+				FTidyMilestonesOverrides::SetIconOverride(Selected->Target->Path, Choice->Spec);
 				AfterChange();
 			}
 		}
@@ -510,7 +510,7 @@ namespace
 			const FString Name = Text.ToString().TrimStartAndEnd();
 			if (!Name.IsEmpty() && Name != Selected->Name.ToString())
 			{
-				FModTierOverrides::SetNameOverride(Selected->Target->Path, Name);
+				FTidyMilestonesOverrides::SetNameOverride(Selected->Target->Path, Name);
 				AfterChange();
 			}
 		}
@@ -519,7 +519,7 @@ namespace
 		{
 			if (Selected.IsValid())
 			{
-				FModTierOverrides::SetNameOverride(Selected->Target->Path, FString());
+				FTidyMilestonesOverrides::SetNameOverride(Selected->Target->Path, FString());
 				AfterChange();
 			}
 			return FReply::Handled();
@@ -529,7 +529,7 @@ namespace
 		{
 			if (Selected.IsValid())
 			{
-				FModTierOverrides::SetIconOverride(Selected->Target->Path, FString());
+				FTidyMilestonesOverrides::SetIconOverride(Selected->Target->Path, FString());
 				AfterChange();
 			}
 			return FReply::Handled();
@@ -566,12 +566,12 @@ namespace
 	};
 }
 
-bool FModTierEditor::IsOpen()
+bool FTidyMilestonesEditor::IsOpen()
 {
 	return ViewportContent.IsValid();
 }
 
-void FModTierEditor::Open(APlayerController* Player)
+void FTidyMilestonesEditor::Open(APlayerController* Player)
 {
 	if (IsOpen() || !Player || !Player->IsLocalController() || !GEngine || !GEngine->GameViewport)
 	{
@@ -582,7 +582,7 @@ void FModTierEditor::Open(APlayerController* Player)
 	GEngine->GameViewport->GetViewportSize(ViewportSize);
 	const float Scale = FMath::Clamp(static_cast<float>(ViewportSize.Y) / 1080.f, 0.5f, 4.f);
 
-	const TSharedRef<SModTierEditor> Editor = SNew(SModTierEditor);
+	const TSharedRef<STidyMilestonesEditor> Editor = SNew(STidyMilestonesEditor);
 	ViewportContent = SNew(SDPIScaler)
 		.DPIScale(Scale)
 		[
@@ -604,7 +604,7 @@ void FModTierEditor::Open(APlayerController* Player)
 	Player->SetShowMouseCursor(true);
 }
 
-void FModTierEditor::Close()
+void FTidyMilestonesEditor::Close()
 {
 	if (!IsOpen())
 	{

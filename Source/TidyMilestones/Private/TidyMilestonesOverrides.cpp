@@ -1,4 +1,4 @@
-#include "ModTierOverrides.h"
+#include "TidyMilestonesOverrides.h"
 
 #include "Dom/JsonObject.h"
 #include "Engine/Texture2D.h"
@@ -21,11 +21,11 @@
 #include "UObject/UObjectIterator.h"
 #include "UObject/UnrealType.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogModTierOverrides, Log, All);
+DEFINE_LOG_CATEGORY_STATIC(LogTidyMilestonesOverrides, Log, All);
 
-TArray<FModTierOverrides::FOverride> FModTierOverrides::Overrides;
-bool FModTierOverrides::bEnabled = true;
-bool FModTierOverrides::bHasApplied = false;
+TArray<FTidyMilestonesOverrides::FOverride> FTidyMilestonesOverrides::Overrides;
+bool FTidyMilestonesOverrides::bEnabled = true;
+bool FTidyMilestonesOverrides::bHasApplied = false;
 
 namespace
 {
@@ -88,24 +88,24 @@ namespace
 			|| Class->IsChildOf(UFGItemDescriptor::StaticClass());
 	}
 
-	const TCHAR* KindName(EModTierTargetKind Kind)
+	const TCHAR* KindName(ETidyMilestonesTargetKind Kind)
 	{
 		switch (Kind)
 		{
-		case EModTierTargetKind::Milestone: return TEXT("Milestone");
-		case EModTierTargetKind::Research: return TEXT("MAM research");
-		case EModTierTargetKind::Item: return TEXT("Item");
+		case ETidyMilestonesTargetKind::Milestone: return TEXT("Milestone");
+		case ETidyMilestonesTargetKind::Research: return TEXT("MAM research");
+		case ETidyMilestonesTargetKind::Item: return TEXT("Item");
 		default: return TEXT("Other unlock");
 		}
 	}
 }
 
-FString FModTierOverrides::GetDirectory()
+FString FTidyMilestonesOverrides::GetDirectory()
 {
-	return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / TEXT("Configs") / TEXT("ModTier"));
+	return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / TEXT("Configs") / TEXT("TidyMilestones"));
 }
 
-void FModTierOverrides::Apply()
+void FTidyMilestonesOverrides::Apply()
 {
 	Revert();
 	IFileManager::Get().MakeDirectory(*(GetDirectory() / TEXT("Icons")), true);
@@ -115,7 +115,7 @@ void FModTierOverrides::Apply()
 	ApplyLoaded();
 }
 
-void FModTierOverrides::SetEnabled(bool bInEnabled)
+void FTidyMilestonesOverrides::SetEnabled(bool bInEnabled)
 {
 	if (bEnabled == bInEnabled)
 	{
@@ -129,7 +129,7 @@ void FModTierOverrides::SetEnabled(bool bInEnabled)
 	}
 }
 
-void FModTierOverrides::ApplyLoaded()
+void FTidyMilestonesOverrides::ApplyLoaded()
 {
 	if (!bEnabled)
 	{
@@ -141,7 +141,7 @@ void FModTierOverrides::ApplyLoaded()
 		UClass* Class = FindTargetClass(Override.Target);
 		if (!Class)
 		{
-			UE_LOG(LogModTierOverrides, Warning, TEXT("Target not found (mod removed?): %s"), *Override.Target);
+			UE_LOG(LogTidyMilestonesOverrides, Warning, TEXT("Target not found (mod removed?): %s"), *Override.Target);
 			continue;
 		}
 		UObject* DefaultObject = Class->GetDefaultObject();
@@ -157,15 +157,15 @@ void FModTierOverrides::ApplyLoaded()
 			}
 			else
 			{
-				UE_LOG(LogModTierOverrides, Warning, TEXT("Icon not found for %s: %s"), *Override.Target, *Override.Icon);
+				UE_LOG(LogTidyMilestonesOverrides, Warning, TEXT("Icon not found for %s: %s"), *Override.Target, *Override.Icon);
 			}
 		}
 		++Applied;
 	}
-	UE_LOG(LogModTierOverrides, Log, TEXT("Applied %d of %d overrides"), Applied, Overrides.Num());
+	UE_LOG(LogTidyMilestonesOverrides, Log, TEXT("Applied %d of %d overrides"), Applied, Overrides.Num());
 }
 
-void FModTierOverrides::Load()
+void FTidyMilestonesOverrides::Load()
 {
 	Overrides.Reset();
 	const FString File = GetDirectory() / TEXT("Overrides.json");
@@ -177,7 +177,7 @@ void FModTierOverrides::Load()
 	TSharedPtr<FJsonObject> Root;
 	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root.IsValid())
 	{
-		UE_LOG(LogModTierOverrides, Error, TEXT("%s is not valid JSON; no overrides applied"), *File);
+		UE_LOG(LogTidyMilestonesOverrides, Error, TEXT("%s is not valid JSON; no overrides applied"), *File);
 		// Keep the unreadable file: the next save would otherwise overwrite what the player wrote.
 		IFileManager::Get().Copy(*(File + TEXT(".unreadable")), *File);
 		return;
@@ -200,7 +200,7 @@ void FModTierOverrides::Load()
 	}
 }
 
-void FModTierOverrides::Save()
+void FTidyMilestonesOverrides::Save()
 {
 	TArray<TSharedPtr<FJsonValue>> Entries;
 	for (const FOverride& Override : Overrides)
@@ -224,11 +224,11 @@ void FModTierOverrides::Save()
 	IFileManager::Get().MakeDirectory(*GetDirectory(), true);
 	if (!FFileHelper::SaveStringToFile(Text, *(GetDirectory() / TEXT("Overrides.json")), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
 	{
-		UE_LOG(LogModTierOverrides, Error, TEXT("Could not write Overrides.json"));
+		UE_LOG(LogTidyMilestonesOverrides, Error, TEXT("Could not write Overrides.json"));
 	}
 }
 
-FModTierOverrides::FOverride& FModTierOverrides::FindOrAddOverride(const FString& Target)
+FTidyMilestonesOverrides::FOverride& FTidyMilestonesOverrides::FindOrAddOverride(const FString& Target)
 {
 	for (FOverride& Override : Overrides)
 	{
@@ -242,7 +242,7 @@ FModTierOverrides::FOverride& FModTierOverrides::FindOrAddOverride(const FString
 	return Override;
 }
 
-FString FModTierOverrides::GetNameOverride(const FString& Target)
+FString FTidyMilestonesOverrides::GetNameOverride(const FString& Target)
 {
 	for (const FOverride& Override : Overrides)
 	{
@@ -254,7 +254,7 @@ FString FModTierOverrides::GetNameOverride(const FString& Target)
 	return FString();
 }
 
-FString FModTierOverrides::GetIconOverride(const FString& Target)
+FString FTidyMilestonesOverrides::GetIconOverride(const FString& Target)
 {
 	for (const FOverride& Override : Overrides)
 	{
@@ -266,19 +266,19 @@ FString FModTierOverrides::GetIconOverride(const FString& Target)
 	return FString();
 }
 
-void FModTierOverrides::SetNameOverride(const FString& Target, const FString& Name)
+void FTidyMilestonesOverrides::SetNameOverride(const FString& Target, const FString& Name)
 {
 	FindOrAddOverride(Target).Name = Name;
 	OnOverridesChanged();
 }
 
-void FModTierOverrides::SetIconOverride(const FString& Target, const FString& IconSpec)
+void FTidyMilestonesOverrides::SetIconOverride(const FString& Target, const FString& IconSpec)
 {
 	FindOrAddOverride(Target).Icon = IconSpec;
 	OnOverridesChanged();
 }
 
-void FModTierOverrides::OnOverridesChanged()
+void FTidyMilestonesOverrides::OnOverridesChanged()
 {
 	Overrides.RemoveAll([](const FOverride& Override) { return Override.Name.IsEmpty() && Override.Icon.IsEmpty(); });
 	Save();
@@ -286,7 +286,7 @@ void FModTierOverrides::OnOverridesChanged()
 	ApplyLoaded();
 }
 
-void FModTierOverrides::Revert()
+void FTidyMilestonesOverrides::Revert()
 {
 	for (int32 Index = SavedValues.Num() - 1; Index >= 0; --Index) // newest first, back to the oldest value
 	{
@@ -307,13 +307,13 @@ void FModTierOverrides::Revert()
 	SavedValues.Reset();
 }
 
-UClass* FModTierOverrides::FindTargetClass(const FString& Path)
+UClass* FTidyMilestonesOverrides::FindTargetClass(const FString& Path)
 {
 	UClass* Class = LoadClass<UObject>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
 	return Class && IsTargetClass(Class) ? Class : nullptr;
 }
 
-UTexture2D* FModTierOverrides::ResolveIcon(const FString& Spec)
+UTexture2D* FTidyMilestonesOverrides::ResolveIcon(const FString& Spec)
 {
 	if (Spec.StartsWith(TEXT("file:")))
 	{
@@ -366,13 +366,13 @@ UTexture2D* FModTierOverrides::ResolveIcon(const FString& Spec)
 	return LoadObject<UTexture2D>(nullptr, *Spec, nullptr, LOAD_NoWarn | LOAD_Quiet);
 }
 
-void FModTierOverrides::GetIconFiles(TArray<FString>& Out)
+void FTidyMilestonesOverrides::GetIconFiles(TArray<FString>& Out)
 {
 	IFileManager::Get().FindFiles(Out, *(GetDirectory() / TEXT("Icons") / TEXT("*.png")), true, false);
 	Out.Sort();
 }
 
-UTexture2D* FModTierOverrides::GetIcon(const UObject* DefaultObject)
+UTexture2D* FTidyMilestonesOverrides::GetIcon(const UObject* DefaultObject)
 {
 	for (const TCHAR* Name : TextureProperties)
 	{
@@ -398,7 +398,7 @@ UTexture2D* FModTierOverrides::GetIcon(const UObject* DefaultObject)
 	return nullptr;
 }
 
-FText FModTierOverrides::GetDisplayName(const UClass* Class)
+FText FTidyMilestonesOverrides::GetDisplayName(const UClass* Class)
 {
 	UClass* MutableClass = const_cast<UClass*>(Class);
 	if (Class->IsChildOf(UFGSchematic::StaticClass()))
@@ -412,7 +412,7 @@ FText FModTierOverrides::GetDisplayName(const UClass* Class)
 	return UFGItemDescriptor::GetItemName(MutableClass);
 }
 
-void FModTierOverrides::SetName(UObject* DefaultObject, const FString& Name)
+void FTidyMilestonesOverrides::SetName(UObject* DefaultObject, const FString& Name)
 {
 	// A building or vehicle takes its name from the thing that gets built, not from its entry in the build menu.
 	UClass* BuiltClass = nullptr;
@@ -449,7 +449,7 @@ void FModTierOverrides::SetName(UObject* DefaultObject, const FString& Name)
 	}
 }
 
-void FModTierOverrides::SetIcon(UObject* DefaultObject, UTexture2D* Icon)
+void FTidyMilestonesOverrides::SetIcon(UObject* DefaultObject, UTexture2D* Icon)
 {
 	for (const TCHAR* Name : TextureProperties)
 	{
@@ -470,7 +470,7 @@ void FModTierOverrides::SetIcon(UObject* DefaultObject, UTexture2D* Icon)
 	}
 }
 
-void FModTierOverrides::GatherTargets(TArray<TSharedPtr<FModTierTarget>>& Out)
+void FTidyMilestonesOverrides::GatherTargets(TArray<TSharedPtr<FTidyMilestonesTarget>>& Out)
 {
 	for (TObjectIterator<UClass> It; It; ++It)
 	{
@@ -480,7 +480,7 @@ void FModTierOverrides::GatherTargets(TArray<TSharedPtr<FModTierTarget>>& Out)
 		{
 			continue;
 		}
-		const TSharedPtr<FModTierTarget> Target = MakeShared<FModTierTarget>();
+		const TSharedPtr<FTidyMilestonesTarget> Target = MakeShared<FTidyMilestonesTarget>();
 		Target->Class = Class;
 		Target->Path = Class->GetPathName();
 		if (!Target->Path.StartsWith(TEXT("/Game/")))
@@ -491,23 +491,23 @@ void FModTierOverrides::GatherTargets(TArray<TSharedPtr<FModTierTarget>>& Out)
 		if (Class->IsChildOf(UFGSchematic::StaticClass()))
 		{
 			const ESchematicType Type = UFGSchematic::GetType(Class);
-			Target->Kind = Type == ESchematicType::EST_Milestone ? EModTierTargetKind::Milestone
-				: Type == ESchematicType::EST_MAM ? EModTierTargetKind::Research : EModTierTargetKind::Other;
+			Target->Kind = Type == ESchematicType::EST_Milestone ? ETidyMilestonesTargetKind::Milestone
+				: Type == ESchematicType::EST_MAM ? ETidyMilestonesTargetKind::Research : ETidyMilestonesTargetKind::Other;
 		}
 		else
 		{
-			Target->Kind = Class->IsChildOf(UFGResearchTree::StaticClass()) ? EModTierTargetKind::Research : EModTierTargetKind::Item;
+			Target->Kind = Class->IsChildOf(UFGResearchTree::StaticClass()) ? ETidyMilestonesTargetKind::Research : ETidyMilestonesTargetKind::Item;
 		}
 		Out.Add(Target);
 	}
 }
 
-void FModTierOverrides::WriteTargets()
+void FTidyMilestonesOverrides::WriteTargets()
 {
-	TArray<TSharedPtr<FModTierTarget>> Targets;
+	TArray<TSharedPtr<FTidyMilestonesTarget>> Targets;
 	GatherTargets(Targets);
 	TArray<FString> Lines;
-	for (const TSharedPtr<FModTierTarget>& Target : Targets)
+	for (const TSharedPtr<FTidyMilestonesTarget>& Target : Targets)
 	{
 		if (!Target->Mod.IsEmpty())
 		{
