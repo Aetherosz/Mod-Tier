@@ -5,7 +5,7 @@
 class UTexture2D;
 
 /** The kinds of thing whose name and icon can be replaced. */
-enum class ETidyMilestonesTargetKind : uint8
+enum class EModTierTargetKind : uint8
 {
 	Milestone,
 	Research, // MAM research and MAM trees
@@ -14,13 +14,13 @@ enum class ETidyMilestonesTargetKind : uint8
 };
 
 /** One thing whose name and icon can be replaced. */
-struct FTidyMilestonesTarget
+struct FModTierTarget
 {
 	TWeakObjectPtr<UClass> Class;
 	FString Path;
 	/** The mod it comes from (the root of its path); empty for the base game. */
 	FString Mod;
-	ETidyMilestonesTargetKind Kind = ETidyMilestonesTargetKind::Other;
+	EModTierTargetKind Kind = EModTierTargetKind::Other;
 };
 
 /**
@@ -29,12 +29,12 @@ struct FTidyMilestonesTarget
  * which is where the menus of the game read them from. Nothing is stored in the save game, and
  * in multiplayer every player sees their own replacements.
  *
- * Files, in <game>/FactoryGame/Configs/TidyMilestones/:
+ * Files, in <game>/FactoryGame/Configs/ModTier/:
  *   Overrides.json  the replacements
  *   Icons/          PNG files of the player
  *   Targets.txt     written by the mod: everything from mods that can be replaced
  */
-class FTidyMilestonesOverrides
+class FModTierOverrides
 {
 public:
 	/** Reads Overrides.json and applies it. Safe to call again: earlier replacements are undone first. */
@@ -44,7 +44,7 @@ public:
 	static void SetEnabled(bool bInEnabled);
 
 	/** Everything loaded whose name and icon can be replaced. */
-	static void GatherTargets(TArray<TSharedPtr<FTidyMilestonesTarget>>& Out);
+	static void GatherTargets(TArray<TSharedPtr<FModTierTarget>>& Out);
 
 	/** The name and icon a target shows now. */
 	static FText GetDisplayName(const UClass* Class);

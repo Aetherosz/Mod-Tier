@@ -1,8 +1,8 @@
 using UnrealBuildTool;
 
-public class TidyMilestones : ModuleRules
+public class ModTier : ModuleRules
 {
-	public TidyMilestones(ReadOnlyTargetRules Target) : base(Target)
+	public ModTier(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		CppStandard = CppStandardVersion.Cpp20;

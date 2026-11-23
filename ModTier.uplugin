@@ -14,7 +14,7 @@
 	"Installed": false,
 	"Modules": [
 		{
-			"Name": "TidyMilestones",
+			"Name": "ModTier",
 			"Type": "Runtime",
 			"LoadingPhase": "PostDefault"
 		}
