@@ -1,6 +1,6 @@
 # Tidy Milestones & OCD Tweaks — handoff
 
-Name: Tidy Milestones & OCD Tweaks. Mod reference and module: `TidyMilestones` (was `ModTier`; renamed before first publish). "Mod tier" in the code and settings still means the HUB tier this mod adds. Icon: Media/logo.png (Sir's handcrafted logo).
+Name: Tidy Milestones & OCD Tweaks. Mod reference: `TidyMilestonesOCD` (2026-11-27: the first ficsit.app page was deleted and its reference `TidyMilestones` stays reserved there, so the plugin was renamed; earlier `ModTier`). C++ module is still `TidyMilestones`. ficsit.app page: https://ficsit.app/mod/4RSdBrcVjfBbLy. "Mod tier" in the code and settings still means the HUB tier this mod adds. Icon: Media/logo.png (Sir's handcrafted logo).
 
 ## What it does
 
@@ -13,15 +13,15 @@ Name: Tidy Milestones & OCD Tweaks. Mod reference and module: `TidyMilestones` (
 
 - The HUB widget is `BPW_Hub`. The Blueprint entry points of `GetTechTier`, `GetHighestAvailableTechTier`, `Conv_IntToText` and `AddChildToHorizontalBox` are replaced (`UFunction::SetNativeFunc`) and answer differently only when the caller is `BPW_Hub_C` / `BPW_Hub_TierButton_C`. Schematics keep their real tier, so saves are untouched.
 - Names and icons are written into class default objects and reverted from saved originals. Buildings and vehicles take their name from the built class, not the descriptor.
-- Overrides live in `<game>/FactoryGame/Configs/TidyMilestones/Overrides.json` (global, not per save). Sir's personal set (79 entries, incl. MAM research and icons) is installed as Overrides.json on his PCs, not shipped.
+- Overrides live in `<game>/FactoryGame/Configs/TidyMilestones/Overrides.json` (folder name kept on purpose after the reference rename; settings now save to Configs/TidyMilestonesOCD.cfg) (global, not per save). Sir's personal set (79 entries, incl. MAM research and icons) is installed as Overrides.json on his PCs, not shipped.
 
 ## Build
 
-SML 3.12.1, UE 5.6.1-CSS. Copy this folder to `<starter project>/Mods/TidyMilestones`, then:
+SML 3.12.1, UE 5.6.1-CSS. Copy this folder to `<starter project>/Mods/TidyMilestonesOCD`, then:
 
 - Editor build (only after adding or removing a UCLASS): `Build.bat FactoryEditor Win64 Development -project=<starter>/FactoryGame.uproject`
-- Package: `RunUAT.bat -ScriptsForProject=<uproject> PackagePlugin -project=<uproject> -clientconfig=Shipping -serverconfig=Shipping "-DLCName=TidyMilestones" -build -platform=Win64 -nocompileeditor -installed`
-- Install: unzip `Saved/ArchivedPlugins/TidyMilestones/TidyMilestones-Windows.zip` into `<game>/FactoryGame/Mods/TidyMilestones` with the game closed.
+- Package: `RunUAT.bat -ScriptsForProject=<uproject> PackagePlugin -project=<uproject> -clientconfig=Shipping -serverconfig=Shipping "-DLCName=TidyMilestonesOCD" -build -platform=Win64 -nocompileeditor -installed`
+- Install: unzip `Saved/ArchivedPlugins/TidyMilestonesOCD/TidyMilestonesOCD-Windows.zip` into `<game>/FactoryGame/Mods/TidyMilestonesOCD` (delete any old `Mods/TidyMilestones` first) with the game closed.
 
 ## Known traps
 

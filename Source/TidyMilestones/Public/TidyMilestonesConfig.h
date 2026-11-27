@@ -16,7 +16,7 @@ enum class ETidyMilestonesEditorKey : uint8
 
 /**
  * Shows up in the game's Mods -> Mod Configuration menu (main menu and pause menu).
- * SML saves it to FactoryGame/Configs/TidyMilestones.cfg.
+ * SML saves it to FactoryGame/Configs/TidyMilestonesOCD.cfg.
  */
 UCLASS()
 class UTidyMilestonesConfig : public UModConfiguration

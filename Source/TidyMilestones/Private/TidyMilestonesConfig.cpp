@@ -21,7 +21,7 @@ const FString UTidyMilestonesConfig::EditorKeyKey = TEXT("EditorKey");
 FConfigId UTidyMilestonesConfig::GetId()
 {
 	FConfigId Id;
-	Id.ModReference = TEXT("TidyMilestones");
+	Id.ModReference = TEXT("TidyMilestonesOCD");
 	Id.ConfigCategory = TEXT("");
 	return Id;
 }
