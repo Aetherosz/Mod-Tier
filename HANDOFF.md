@@ -1,6 +1,6 @@
 # Tidy Milestones & OCD Tweaks — handoff
 
-Name: Tidy Milestones & OCD Tweaks. Mod reference and module: `TidyMilestones` (was `ModTier`; renamed before first publish). "Mod tier" in the code and settings still means the HUB tier this mod adds. Icon still to do.
+Name: Tidy Milestones & OCD Tweaks. Mod reference and module: `TidyMilestones` (was `ModTier`; renamed before first publish). "Mod tier" in the code and settings still means the HUB tier this mod adds. Icon: Media/logo.png (Sir's handcrafted logo).
 
 ## What it does
 
@@ -37,6 +37,6 @@ SML 3.12.1, UE 5.6.1-CSS. Copy this folder to `<starter project>/Mods/TidyMilest
 
 ## To do
 
-- Icon.
+- Icon: done (Media/logo.png).
 - README, then publish prep: mod manager install test, multiplayer check, mod page.
 - Sorting inside the mod tier, gamepad order of the tier bar, editor styling.
