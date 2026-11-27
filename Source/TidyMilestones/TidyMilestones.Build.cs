@@ -26,7 +26,8 @@ public class TidyMilestones : ModuleRules
 			"Foliage",
 			"NetCore",
 			"GameplayTags",
-			"Json", "JsonUtilities"
+			"Json", "JsonUtilities",
+			"Projects"
 		});
 
 		// Header stubs

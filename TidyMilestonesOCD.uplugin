@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
-	"Version": 0,
-	"VersionName": "0.1.0",
-	"SemVersion": "0.1.0",
+	"Version": 1,
+	"VersionName": "0.2.0",
+	"SemVersion": "0.2.0",
 	"GameVersion": ">=520140",
 	"FriendlyName": "Tidy Milestones & OCD Tweaks",
 	"Description": "Puts modded milestones in their own HUB tier, and lets you rename and re-icon what mods add. For OCDs, by an OCD.",

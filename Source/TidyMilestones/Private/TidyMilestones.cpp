@@ -19,6 +19,7 @@
 #include "TidyMilestonesEditor.h"
 #include "TidyMilestonesOverrides.h"
 #include "Kismet/KismetTextLibrary.h"
+#include "Interfaces/IPluginManager.h"
 #include "Patching/NativeHookManager.h"
 #include "TimerManager.h"
 #include "UObject/Script.h"
@@ -133,6 +134,15 @@ void FTidyMilestones::RegisterHooks()
 	ReplaceEntryPoint(AFGSchematicManager::StaticClass(), TEXT("GetHighestAvailableTechTier"), &FTidyMilestones::ExecGetHighestAvailableTechTier);
 	OriginalConvIntToText = ReplaceEntryPoint(UKismetTextLibrary::StaticClass(), TEXT("Conv_IntToText"), &FTidyMilestones::ExecConvIntToText);
 	OriginalAddChildToHorizontalBox = ReplaceEntryPoint(UHorizontalBox::StaticClass(), TEXT("AddChildToHorizontalBox"), &FTidyMilestones::ExecAddChildToHorizontalBox);
+
+	// The order of the mod tier: by mod, then by milestone name. The HUB's lists come from one of
+	// these and may be sorted by menu priority afterwards; each puts the mod milestones in order
+	// when the HUB is the caller.
+	ReplaceEntryPoint(UFGSchematic::StaticClass(), TEXT("SortByMenuPriority"), &FTidyMilestones::ExecSortByMenuPriority);
+	ReplaceEntryPoint(AFGSchematicManager::StaticClass(), TEXT("GetAllSchematics"), &FTidyMilestones::ExecGetAllSchematics);
+	ReplaceEntryPoint(AFGSchematicManager::StaticClass(), TEXT("GetAllSchematicsOfType"), &FTidyMilestones::ExecGetAllSchematicsOfType);
+	ReplaceEntryPoint(AFGSchematicManager::StaticClass(), TEXT("GetAllSchematicsOfTypeFilteredOnDependency"), &FTidyMilestones::ExecGetAllSchematicsOfTypeFilteredOnDependency);
+	ReplaceEntryPoint(AFGSchematicManager::StaticClass(), TEXT("GetAllVisibleSchematicsOfType"), &FTidyMilestones::ExecGetAllVisibleSchematicsOfType);
 
 	// The game's own list of a tier's milestones, used for the tier's state: leave the moved ones out,
 	// so a tier doesn't stay "not finished" because of milestones that are shown elsewhere.
@@ -413,4 +423,120 @@ void FTidyMilestones::RefreshSettings()
 	const int32 KeyValue = Key ? Key->Value : 0;
 	EditorKeyChoice = KeyValue >= 0 && KeyValue <= static_cast<int32>(ETidyMilestonesEditorKey::Off)
 		? static_cast<ETidyMilestonesEditorKey>(KeyValue) : ETidyMilestonesEditorKey::CtrlShiftM;
+}
+
+FString FTidyMilestones::GetModSortName(const UClass* Schematic)
+{
+	FString Root;
+	Schematic->GetPathName().RightChop(1).Split(TEXT("/"), &Root, nullptr);
+	const TSharedPtr<IPlugin> Plugin = Root.IsEmpty() ? nullptr : IPluginManager::Get().FindPlugin(Root);
+	const FString Friendly = Plugin.IsValid() ? Plugin->GetDescriptor().FriendlyName : FString();
+	return Friendly.IsEmpty() ? Root : Friendly;
+}
+
+void FTidyMilestones::SortModTier(TArray<TSubclassOf<UFGSchematic>>& Schematics, const TCHAR* Source)
+{
+	// Only the mod milestones move, and only among the places they already take: the game's own
+	// milestones keep their order (they are never shown in the mod tier anyway).
+	TArray<int32> Slots;
+	TArray<TSubclassOf<UFGSchematic>> Moved;
+	for (int32 Index = 0; Index < Schematics.Num(); ++Index)
+	{
+		if (IsMovedSchematic(Schematics[Index]))
+		{
+			Slots.Add(Index);
+			Moved.Add(Schematics[Index]);
+		}
+	}
+	if (Moved.Num() < 2)
+	{
+		return;
+	}
+	struct FKey { FString Mod; FString Name; FString Path; };
+	TMap<UClass*, FKey> Keys;
+	for (const TSubclassOf<UFGSchematic>& Schematic : Moved)
+	{
+		Keys.Add(Schematic, { GetModSortName(Schematic), UFGSchematic::GetSchematicDisplayName(Schematic).ToString(), Schematic->GetPathName() });
+	}
+	Moved.StableSort([&Keys](const TSubclassOf<UFGSchematic>& A, const TSubclassOf<UFGSchematic>& B)
+	{
+		const FKey& KA = Keys[A];
+		const FKey& KB = Keys[B];
+		if (const int32 C = KA.Mod.Compare(KB.Mod, ESearchCase::IgnoreCase)) return C < 0;
+		if (const int32 C = KA.Name.Compare(KB.Name, ESearchCase::IgnoreCase)) return C < 0;
+		return KA.Path < KB.Path;
+	});
+	for (int32 Index = 0; Index < Slots.Num(); ++Index)
+	{
+		Schematics[Slots[Index]] = Moved[Index];
+	}
+	static TSet<FString> Logged;
+	if (!Logged.Contains(Source))
+	{
+		Logged.Add(Source);
+		UE_LOG(LogTidyMilestones, Log, TEXT("HUB order: %d mod milestones sorted by mod and name (via %s)"), Moved.Num(), Source);
+	}
+}
+
+// static void UFGSchematic::SortByMenuPriority( TArray< TSubclassOf< UFGSchematic > >& schematics )
+void FTidyMilestones::ExecSortByMenuPriority(UObject* Context, FFrame& Stack, RESULT_DECL)
+{
+	P_GET_TARRAY_REF(TSubclassOf<UFGSchematic>, Schematics);
+	P_FINISH;
+	UFGSchematic::SortByMenuPriority(Schematics);
+	if (bTabEnabled && IsCalledBy(Stack, HubClassName))
+	{
+		SortModTier(Schematics, TEXT("SortByMenuPriority"));
+	}
+}
+
+// void AFGSchematicManager::GetAllSchematics( TArray< TSubclassOf< UFGSchematic > >& out_schematics ) const
+void FTidyMilestones::ExecGetAllSchematics(UObject* Context, FFrame& Stack, RESULT_DECL)
+{
+	P_GET_TARRAY_REF(TSubclassOf<UFGSchematic>, Out);
+	P_FINISH;
+	CastChecked<AFGSchematicManager>(Context)->GetAllSchematics(Out);
+	if (bTabEnabled && IsCalledBy(Stack, HubClassName))
+	{
+		SortModTier(Out, TEXT("GetAllSchematics"));
+	}
+}
+
+// void AFGSchematicManager::GetAllSchematicsOfType( ESchematicType type, TArray< TSubclassOf< UFGSchematic > >& out_schematics ) const
+void FTidyMilestones::ExecGetAllSchematicsOfType(UObject* Context, FFrame& Stack, RESULT_DECL)
+{
+	P_GET_ENUM(ESchematicType, Type);
+	P_GET_TARRAY_REF(TSubclassOf<UFGSchematic>, Out);
+	P_FINISH;
+	CastChecked<AFGSchematicManager>(Context)->GetAllSchematicsOfType(Type, Out);
+	if (bTabEnabled && IsCalledBy(Stack, HubClassName))
+	{
+		SortModTier(Out, TEXT("GetAllSchematicsOfType"));
+	}
+}
+
+// void AFGSchematicManager::GetAllSchematicsOfTypeFilteredOnDependency( ESchematicType type, TArray< TSubclassOf< UFGSchematic > >& out_schematics ) const
+void FTidyMilestones::ExecGetAllSchematicsOfTypeFilteredOnDependency(UObject* Context, FFrame& Stack, RESULT_DECL)
+{
+	P_GET_ENUM(ESchematicType, Type);
+	P_GET_TARRAY_REF(TSubclassOf<UFGSchematic>, Out);
+	P_FINISH;
+	CastChecked<AFGSchematicManager>(Context)->GetAllSchematicsOfTypeFilteredOnDependency(Type, Out);
+	if (bTabEnabled && IsCalledBy(Stack, HubClassName))
+	{
+		SortModTier(Out, TEXT("GetAllSchematicsOfTypeFilteredOnDependency"));
+	}
+}
+
+// void AFGSchematicManager::GetAllVisibleSchematicsOfType( ESchematicType type, TArray< TSubclassOf< UFGSchematic > >& out_schematics ) const
+void FTidyMilestones::ExecGetAllVisibleSchematicsOfType(UObject* Context, FFrame& Stack, RESULT_DECL)
+{
+	P_GET_ENUM(ESchematicType, Type);
+	P_GET_TARRAY_REF(TSubclassOf<UFGSchematic>, Out);
+	P_FINISH;
+	CastChecked<AFGSchematicManager>(Context)->GetAllVisibleSchematicsOfType(Type, Out);
+	if (bTabEnabled && IsCalledBy(Stack, HubClassName))
+	{
+		SortModTier(Out, TEXT("GetAllVisibleSchematicsOfType"));
+	}
 }

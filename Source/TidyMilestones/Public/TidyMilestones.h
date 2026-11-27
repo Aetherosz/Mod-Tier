@@ -16,7 +16,9 @@ struct FFrame;
  *  - makes one tier button for 0..GetHighestAvailableTechTier(),
  *  - lists for a tier the available milestones whose GetTechTier() equals it,
  *  - writes the tier number on the button with Conv_IntToText().
- * Those three functions get a replacement Blueprint entry point that answers differently when,
+ * The lists the HUB gets from the schematic manager (and UFGSchematic::SortByMenuPriority) are
+ * also hooked, to put the mod tier in order: by mod (its name in the mod manager), then by name.
+ * Those functions get a replacement Blueprint entry point that answers differently when,
  * and only when, the HUB's widgets are the caller. Calls from C++ and other Blueprints are untouched.
  */
 class FTidyMilestones
@@ -45,6 +47,16 @@ private:
 	static void ExecGetHighestAvailableTechTier(UObject* Context, FFrame& Stack, void* const Result);
 	static void ExecConvIntToText(UObject* Context, FFrame& Stack, void* const Result);
 	static void ExecAddChildToHorizontalBox(UObject* Context, FFrame& Stack, void* const Result);
+	static void ExecSortByMenuPriority(UObject* Context, FFrame& Stack, void* const Result);
+	static void ExecGetAllSchematics(UObject* Context, FFrame& Stack, void* const Result);
+	static void ExecGetAllSchematicsOfType(UObject* Context, FFrame& Stack, void* const Result);
+	static void ExecGetAllSchematicsOfTypeFilteredOnDependency(UObject* Context, FFrame& Stack, void* const Result);
+	static void ExecGetAllVisibleSchematicsOfType(UObject* Context, FFrame& Stack, void* const Result);
+
+	/** Puts the mod milestones of a list in mod tier order, in the places they already take. */
+	static void SortModTier(TArray<TSubclassOf<UFGSchematic>>& Schematics, const TCHAR* Source);
+	/** The name of the mod a schematic comes from, as the mod manager shows it. */
+	static FString GetModSortName(const UClass* Schematic);
 
 	/** Draws the last tier button (the mod tier) in front of the others. */
 	static void MoveModTierButtonToFront(class UHorizontalBox* TierList);
