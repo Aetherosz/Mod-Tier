@@ -37,6 +37,8 @@ public:
 	static const FString ShowAllKey;
 	/** Replace names and icons with the ones chosen by the player. */
 	static const FString OverridesKey;
+	/** Apply Aetherosz's names, a preset shipped with the mod. Off by default. */
+	static const FString PresetKey;
 	/** ETidyMilestonesEditorKey as an integer. */
 	static const FString EditorKeyKey;
 

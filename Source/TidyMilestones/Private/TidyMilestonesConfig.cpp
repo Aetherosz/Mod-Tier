@@ -15,6 +15,7 @@ const FString UTidyMilestonesConfig::DefaultLabel = TEXT("M");
 const FString UTidyMilestonesConfig::LeftKey = TEXT("TierOnLeft");
 const FString UTidyMilestonesConfig::ShowAllKey = TEXT("ShowAllAtOnce");
 const FString UTidyMilestonesConfig::OverridesKey = TEXT("NamesAndIcons");
+const FString UTidyMilestonesConfig::PresetKey = TEXT("AetheroszNames");
 const FString UTidyMilestonesConfig::EditorKeyKey = TEXT("EditorKey");
 
 FConfigId UTidyMilestonesConfig::GetId()
@@ -75,6 +76,16 @@ UTidyMilestonesConfig::UTidyMilestonesConfig()
 	Overrides->Value = true;
 	Overrides->bRequiresWorldReload = false;
 	RootSection->SectionProperties.Add(OverridesKey, Overrides);
+
+	UConfigPropertyBool* Preset = CreateDefaultSubobject<UConfigPropertyBool>(TEXT("AetheroszNames"));
+	Preset->DisplayName = LOCTEXT("PresetName", "Use Aetherosz's names");
+	Preset->Tooltip = LOCTEXT("PresetTooltip",
+		"Quick tidy-up: plain, consistent names for the milestones of popular mods, "
+		"picked by the mod's author. Mods you don't have are skipped. Your own names and icons still win.");
+	Preset->DefaultValue = false;
+	Preset->Value = false;
+	Preset->bRequiresWorldReload = false;
+	RootSection->SectionProperties.Add(PresetKey, Preset);
 
 	UConfigPropertyInteger* EditorKey = CreateDefaultSubobject<UConfigPropertyInteger>(TEXT("EditorKey"));
 	EditorKey->DisplayName = LOCTEXT("EditorKeyName", "Names and icons window");

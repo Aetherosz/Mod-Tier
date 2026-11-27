@@ -43,6 +43,9 @@ public:
 	/** Off: everything shows the name and icon it came with. The replacements are kept. */
 	static void SetEnabled(bool bInEnabled);
 
+	/** On: Aetherosz's names (a preset compiled into the mod) apply under the player's own replacements. Off by default. */
+	static void SetPresetEnabled(bool bInEnabled);
+
 	/** Everything loaded whose name and icon can be replaced. */
 	static void GatherTargets(TArray<TSharedPtr<FTidyMilestonesTarget>>& Out);
 
@@ -74,6 +77,9 @@ private:
 	};
 
 	static void Load();
+	/** Reads {"overrides": [{"target", "name", "icon"}]}. False if the text is not valid JSON. */
+	static bool ParseOverrides(const FString& Text, TArray<FOverride>& Out);
+	static void ApplyList(const TArray<FOverride>& List, const TCHAR* What, bool bIsPreset);
 	static void Save();
 	static void WriteTargets();
 	static FOverride& FindOrAddOverride(const FString& Target);
@@ -89,7 +95,10 @@ private:
 	static void SetIcon(UObject* DefaultObject, UTexture2D* Icon);
 
 	static TArray<FOverride> Overrides;
+	/** Aetherosz's names, from AetheroszNames.inl. Never written to Overrides.json. */
+	static TArray<FOverride> PresetOverrides;
 	static bool bEnabled;
+	static bool bPresetEnabled;
 	/** True once a save has been loaded: before that nothing is applied. */
 	static bool bHasApplied;
 };

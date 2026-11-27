@@ -24,11 +24,15 @@
 DEFINE_LOG_CATEGORY_STATIC(LogTidyMilestonesOverrides, Log, All);
 
 TArray<FTidyMilestonesOverrides::FOverride> FTidyMilestonesOverrides::Overrides;
+TArray<FTidyMilestonesOverrides::FOverride> FTidyMilestonesOverrides::PresetOverrides;
 bool FTidyMilestonesOverrides::bEnabled = true;
+bool FTidyMilestonesOverrides::bPresetEnabled = false;
 bool FTidyMilestonesOverrides::bHasApplied = false;
 
 namespace
 {
+#include "AetheroszNames.inl"
+
 	const TCHAR* const NameProperty = TEXT("mDisplayName");
 	/** Icon fields of the three kinds of target: brushes and plain textures. */
 	const TCHAR* const BrushProperties[] = { TEXT("mSchematicIcon"), TEXT("mResearchTreeIcon") };
@@ -129,20 +133,55 @@ void FTidyMilestonesOverrides::SetEnabled(bool bInEnabled)
 	}
 }
 
-void FTidyMilestonesOverrides::ApplyLoaded()
+void FTidyMilestonesOverrides::SetPresetEnabled(bool bInEnabled)
 {
-	if (!bEnabled)
+	if (bPresetEnabled == bInEnabled)
 	{
 		return;
 	}
+	bPresetEnabled = bInEnabled;
+	if (bHasApplied)
+	{
+		Revert();
+		ApplyLoaded();
+	}
+}
+
+void FTidyMilestonesOverrides::ApplyLoaded()
+{
+	// The preset first, so the player's own replacements win where both change the same thing.
+	if (bPresetEnabled)
+	{
+		if (PresetOverrides.IsEmpty() && !ParseOverrides(AetheroszNamesJson, PresetOverrides))
+		{
+			UE_LOG(LogTidyMilestonesOverrides, Error, TEXT("Aetherosz's names could not be read"));
+		}
+		ApplyList(PresetOverrides, TEXT("of Aetherosz's names"), true);
+	}
+	if (bEnabled)
+	{
+		ApplyList(Overrides, TEXT("overrides"), false);
+	}
+}
+
+void FTidyMilestonesOverrides::ApplyList(const TArray<FOverride>& List, const TCHAR* What, bool bIsPreset)
+{
 	int32 Applied = 0;
-	for (const FOverride& Override : Overrides)
+	for (const FOverride& Override : List)
 	{
 		UClass* Class = FindTargetClass(Override.Target);
 		if (!Class)
 		{
-			UE_LOG(LogTidyMilestonesOverrides, Warning, TEXT("Target not found (mod removed?): %s"), *Override.Target);
+			// The preset covers mods most players don't have: only the player's own entries are worth a warning.
+			if (!bIsPreset)
+			{
+				UE_LOG(LogTidyMilestonesOverrides, Warning, TEXT("Target not found (mod removed?): %s"), *Override.Target);
+			}
 			continue;
+		}
+		if (bIsPreset && !(Class->IsChildOf(UFGSchematic::StaticClass()) && UFGSchematic::GetType(Class) == ESchematicType::EST_Milestone))
+		{
+			continue; // the preset only renames milestones, whatever the list says
 		}
 		UObject* DefaultObject = Class->GetDefaultObject();
 		if (!Override.Name.IsEmpty())
@@ -162,7 +201,7 @@ void FTidyMilestonesOverrides::ApplyLoaded()
 		}
 		++Applied;
 	}
-	UE_LOG(LogTidyMilestonesOverrides, Log, TEXT("Applied %d of %d overrides"), Applied, Overrides.Num());
+	UE_LOG(LogTidyMilestonesOverrides, Log, TEXT("Applied %d of %d %s"), Applied, List.Num(), What);
 }
 
 void FTidyMilestonesOverrides::Load()
@@ -174,18 +213,26 @@ void FTidyMilestonesOverrides::Load()
 	{
 		return; // no file: nothing to replace
 	}
-	TSharedPtr<FJsonObject> Root;
-	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root.IsValid())
+	if (!ParseOverrides(Text, Overrides))
 	{
 		UE_LOG(LogTidyMilestonesOverrides, Error, TEXT("%s is not valid JSON; no overrides applied"), *File);
 		// Keep the unreadable file: the next save would otherwise overwrite what the player wrote.
 		IFileManager::Get().Copy(*(File + TEXT(".unreadable")), *File);
-		return;
+	}
+}
+
+bool FTidyMilestonesOverrides::ParseOverrides(const FString& Text, TArray<FOverride>& Out)
+{
+	Out.Reset();
+	TSharedPtr<FJsonObject> Root;
+	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root.IsValid())
+	{
+		return false;
 	}
 	const TArray<TSharedPtr<FJsonValue>>* Entries = nullptr;
 	if (!Root->TryGetArrayField(TEXT("overrides"), Entries))
 	{
-		return;
+		return true;
 	}
 	for (const TSharedPtr<FJsonValue>& Entry : *Entries)
 	{
@@ -195,9 +242,10 @@ void FTidyMilestonesOverrides::Load()
 		{
 			(*Object)->TryGetStringField(TEXT("name"), Override.Name);
 			(*Object)->TryGetStringField(TEXT("icon"), Override.Icon);
-			Overrides.Add(MoveTemp(Override));
+			Out.Add(MoveTemp(Override));
 		}
 	}
+	return true;
 }
 
 void FTidyMilestonesOverrides::Save()

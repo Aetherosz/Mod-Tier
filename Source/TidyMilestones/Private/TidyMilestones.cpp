@@ -397,6 +397,7 @@ void FTidyMilestones::RefreshSettings()
 	bTabEnabled = GetBool(UTidyMilestonesConfig::TabKey, true);
 	bUnlockAllAtOnce = GetBool(UTidyMilestonesConfig::ShowAllKey, false);
 	FTidyMilestonesOverrides::SetEnabled(GetBool(UTidyMilestonesConfig::OverridesKey, true));
+	FTidyMilestonesOverrides::SetPresetEnabled(GetBool(UTidyMilestonesConfig::PresetKey, false));
 	bTierOnLeft = GetBool(UTidyMilestonesConfig::LeftKey, true);
 
 	const TObjectPtr<UConfigProperty>* LabelProperty = Root->SectionProperties.Find(UTidyMilestonesConfig::LabelKey);
