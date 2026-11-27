@@ -2,11 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Configuration/ModConfiguration.h"
-#include "ModTierConfig.generated.h"
+#include "TidyMilestonesConfig.generated.h"
 
 /** The keys that open the names and icons window. The stored value is the index. */
 UENUM()
-enum class EModTierEditorKey : uint8
+enum class ETidyMilestonesEditorKey : uint8
 {
 	CtrlShiftM,
 	CtrlShiftN,
@@ -16,15 +16,15 @@ enum class EModTierEditorKey : uint8
 
 /**
  * Shows up in the game's Mods -> Mod Configuration menu (main menu and pause menu).
- * SML saves it to FactoryGame/Configs/ModTier.cfg.
+ * SML saves it to FactoryGame/Configs/TidyMilestonesOCD.cfg.
  */
 UCLASS()
-class UModTierConfig : public UModConfiguration
+class UTidyMilestonesConfig : public UModConfiguration
 {
 	GENERATED_BODY()
 
 public:
-	UModTierConfig();
+	UTidyMilestonesConfig();
 
 	/** Mod milestones get their own tier in the HUB. */
 	static const FString TabKey;
@@ -37,7 +37,9 @@ public:
 	static const FString ShowAllKey;
 	/** Replace names and icons with the ones chosen by the player. */
 	static const FString OverridesKey;
-	/** EModTierEditorKey as an integer. */
+	/** Apply Aetherosz's names, a preset shipped with the mod. Off by default. */
+	static const FString PresetKey;
+	/** ETidyMilestonesEditorKey as an integer. */
 	static const FString EditorKeyKey;
 
 	static FConfigId GetId();

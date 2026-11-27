@@ -1,4 +1,4 @@
-#include "ModTier.h"
+#include "TidyMilestones.h"
 
 #include "FGSchematic.h"
 #include "Configuration/ConfigManager.h"
@@ -7,7 +7,7 @@
 #include "Configuration/Properties/ConfigPropertySection.h"
 #include "Configuration/Properties/ConfigPropertyString.h"
 #include "Engine/GameInstance.h"
-#include "ModTierConfig.h"
+#include "TidyMilestonesConfig.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Engine/World.h"
@@ -16,8 +16,8 @@
 #include "Framework/Application/IInputProcessor.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerController.h"
-#include "ModTierEditor.h"
-#include "ModTierOverrides.h"
+#include "TidyMilestonesEditor.h"
+#include "TidyMilestonesOverrides.h"
 #include "Kismet/KismetTextLibrary.h"
 #include "Patching/NativeHookManager.h"
 #include "TimerManager.h"
@@ -25,11 +25,11 @@
 #include "UObject/Stack.h"
 #include "UObject/UnrealType.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogModTier, Log, All);
+DEFINE_LOG_CATEGORY_STATIC(LogTidyMilestones, Log, All);
 
-TWeakObjectPtr<UConfigManager> FModTier::ConfigManager;
-bool FModTier::bTabEnabled = true;
-bool FModTier::bUnlockAllAtOnce = false;
+TWeakObjectPtr<UConfigManager> FTidyMilestones::ConfigManager;
+bool FTidyMilestones::bTabEnabled = true;
+bool FTidyMilestones::bUnlockAllAtOnce = false;
 
 namespace
 {
@@ -48,7 +48,7 @@ namespace
 	bool bTierOnLeft = true;
 
 	/** The key choice of the Mod Configuration page. */
-	EModTierEditorKey EditorKeyChoice = EModTierEditorKey::CtrlShiftM;
+	ETidyMilestonesEditorKey EditorKeyChoice = ETidyMilestonesEditorKey::CtrlShiftM;
 
 	/** Ctrl+Shift+<key> opens and closes the names and icons window. Sees keys before the game does. */
 	class FEditorKey : public IInputProcessor
@@ -58,16 +58,16 @@ namespace
 
 		virtual bool HandleKeyDownEvent(FSlateApplication& SlateApp, const FKeyEvent& KeyEvent) override
 		{
-			const FKey Wanted = EditorKeyChoice == EModTierEditorKey::CtrlShiftM ? EKeys::M
-				: EditorKeyChoice == EModTierEditorKey::CtrlShiftN ? EKeys::N
-				: EditorKeyChoice == EModTierEditorKey::CtrlShiftK ? EKeys::K : EKeys::Invalid;
+			const FKey Wanted = EditorKeyChoice == ETidyMilestonesEditorKey::CtrlShiftM ? EKeys::M
+				: EditorKeyChoice == ETidyMilestonesEditorKey::CtrlShiftN ? EKeys::N
+				: EditorKeyChoice == ETidyMilestonesEditorKey::CtrlShiftK ? EKeys::K : EKeys::Invalid;
 			if (!Wanted.IsValid() || KeyEvent.GetKey() != Wanted || !KeyEvent.IsControlDown() || !KeyEvent.IsShiftDown() || KeyEvent.IsRepeat())
 			{
 				return false;
 			}
-			if (FModTierEditor::IsOpen())
+			if (FTidyMilestonesEditor::IsOpen())
 			{
-				FModTierEditor::Close();
+				FTidyMilestonesEditor::Close();
 				return true;
 			}
 			UWorld* World = EditorWorld.Get();
@@ -76,7 +76,7 @@ namespace
 			{
 				return false; // main menu, or no save loaded yet
 			}
-			FModTierEditor::Open(Player);
+			FTidyMilestonesEditor::Open(Player);
 			return true;
 		}
 	};
@@ -101,7 +101,7 @@ namespace
 		UFunction* Function = Class ? Class->FindFunctionByName(FunctionName) : nullptr;
 		if (!Function || !Function->HasAnyFunctionFlags(FUNC_Native))
 		{
-			UE_LOG(LogModTier, Error, TEXT("Function %s not found; the mod tab will not work"), FunctionName);
+			UE_LOG(LogTidyMilestones, Error, TEXT("Function %s not found; the mod tab will not work"), FunctionName);
 			return nullptr;
 		}
 		const FNativeFuncPtr Original = Function->GetNativeFunc();
@@ -110,29 +110,29 @@ namespace
 	}
 }
 
-void FModTier::RegisterHooks()
+void FTidyMilestones::RegisterHooks()
 {
 #if !WITH_EDITOR
 	// Register the mod config as soon as the game instance exists, so it is listed in the main
 	// menu's Mods -> Mod Configuration before any save loads.
-	FWorldDelegates::OnStartGameInstance.AddStatic(&FModTier::RegisterConfig);
+	FWorldDelegates::OnStartGameInstance.AddStatic(&FTidyMilestones::RegisterConfig);
 
 	// Write config changes right away, and use them right away. SML otherwise saves on a timer that
 	// doesn't run while the game is paused, and its flush at shutdown crashes.
 	SUBSCRIBE_METHOD_AFTER(UConfigManager::MarkConfigurationDirty,
 		[](UConfigManager* Self, const FConfigId& Id)
 		{
-			if (Id == UModTierConfig::GetId())
+			if (Id == UTidyMilestonesConfig::GetId())
 			{
 				Self->FlushPendingSaves();
 				RefreshSettings();
 			}
 		});
 
-	ReplaceEntryPoint(UFGSchematic::StaticClass(), TEXT("GetTechTier"), &FModTier::ExecGetTechTier);
-	ReplaceEntryPoint(AFGSchematicManager::StaticClass(), TEXT("GetHighestAvailableTechTier"), &FModTier::ExecGetHighestAvailableTechTier);
-	OriginalConvIntToText = ReplaceEntryPoint(UKismetTextLibrary::StaticClass(), TEXT("Conv_IntToText"), &FModTier::ExecConvIntToText);
-	OriginalAddChildToHorizontalBox = ReplaceEntryPoint(UHorizontalBox::StaticClass(), TEXT("AddChildToHorizontalBox"), &FModTier::ExecAddChildToHorizontalBox);
+	ReplaceEntryPoint(UFGSchematic::StaticClass(), TEXT("GetTechTier"), &FTidyMilestones::ExecGetTechTier);
+	ReplaceEntryPoint(AFGSchematicManager::StaticClass(), TEXT("GetHighestAvailableTechTier"), &FTidyMilestones::ExecGetHighestAvailableTechTier);
+	OriginalConvIntToText = ReplaceEntryPoint(UKismetTextLibrary::StaticClass(), TEXT("Conv_IntToText"), &FTidyMilestones::ExecConvIntToText);
+	OriginalAddChildToHorizontalBox = ReplaceEntryPoint(UHorizontalBox::StaticClass(), TEXT("AddChildToHorizontalBox"), &FTidyMilestones::ExecAddChildToHorizontalBox);
 
 	// The game's own list of a tier's milestones, used for the tier's state: leave the moved ones out,
 	// so a tier doesn't stay "not finished" because of milestones that are shown elsewhere.
@@ -187,19 +187,19 @@ void FModTier::RegisterHooks()
 					RegisterConfig(Self->GetGameInstance()); // fallback if OnStartGameInstance fired before we loaded
 				}
 				RefreshSettings();
-				FModTierOverrides::Apply();
+				FTidyMilestonesOverrides::Apply();
 				EditorWorld = World;
 				RegisterEditorKey();
 			}
 		});
 
-	FWorldDelegates::OnWorldCleanup.AddLambda([](UWorld*, bool, bool) { FModTierEditor::Close(); });
+	FWorldDelegates::OnWorldCleanup.AddLambda([](UWorld*, bool, bool) { FTidyMilestonesEditor::Close(); });
 
-	UE_LOG(LogModTier, Log, TEXT("Hooks registered"));
+	UE_LOG(LogTidyMilestones, Log, TEXT("Hooks registered"));
 #endif
 }
 
-bool FModTier::IsMovedSchematic(TSubclassOf<UFGSchematic> Schematic)
+bool FTidyMilestones::IsMovedSchematic(TSubclassOf<UFGSchematic> Schematic)
 {
 	if (!bTabEnabled || !Schematic || UFGSchematic::GetType(Schematic) != ESchematicType::EST_Milestone)
 	{
@@ -209,18 +209,18 @@ bool FModTier::IsMovedSchematic(TSubclassOf<UFGSchematic> Schematic)
 	return !Schematic->GetPathName().StartsWith(TEXT("/Game/"));
 }
 
-int32 FModTier::GetModTier(const AFGSchematicManager* Manager)
+int32 FTidyMilestones::GetModTier(const AFGSchematicManager* Manager)
 {
 	if (CachedManager.Get() != Manager)
 	{
 		CachedManager = Manager;
 		CachedModTier = const_cast<AFGSchematicManager*>(Manager)->GetHighestAvailableTechTier() + 1;
-		UE_LOG(LogModTier, Log, TEXT("Mod tier is %d"), CachedModTier);
+		UE_LOG(LogTidyMilestones, Log, TEXT("Mod tier is %d"), CachedModTier);
 	}
 	return CachedModTier;
 }
 
-bool FModTier::IsShownInModTab(const AFGSchematicManager* Manager, TSubclassOf<UFGSchematic> Schematic)
+bool FTidyMilestones::IsShownInModTab(const AFGSchematicManager* Manager, TSubclassOf<UFGSchematic> Schematic)
 {
 	if (!IsMovedSchematic(Schematic))
 	{
@@ -229,7 +229,7 @@ bool FModTier::IsShownInModTab(const AFGSchematicManager* Manager, TSubclassOf<U
 	return bUnlockAllAtOnce || Manager->GetTechTierState(UFGSchematic::GetTechTier(Schematic)) != ETechTierState::ETTS_Locked;
 }
 
-void FModTier::GetModTabSchematics(const AFGSchematicManager* Manager, TArray<TSubclassOf<UFGSchematic>>& Out)
+void FTidyMilestones::GetModTabSchematics(const AFGSchematicManager* Manager, TArray<TSubclassOf<UFGSchematic>>& Out)
 {
 	Out.Reset();
 	TArray<TSubclassOf<UFGSchematic>> All;
@@ -243,7 +243,7 @@ void FModTier::GetModTabSchematics(const AFGSchematicManager* Manager, TArray<TS
 	}
 }
 
-bool FModTier::IsCalledBy(const FFrame& Stack, const FName& ClassName)
+bool FTidyMilestones::IsCalledBy(const FFrame& Stack, const FName& ClassName)
 {
 	// For a native function called from Blueprint code, the frame is the calling Blueprint function's.
 	const UClass* Class = Stack.Node ? Stack.Node->GetOuterUClass() : nullptr;
@@ -258,7 +258,7 @@ bool FModTier::IsCalledBy(const FFrame& Stack, const FName& ClassName)
 }
 
 // static int32 UFGSchematic::GetTechTier( TSubclassOf< UFGSchematic > inClass )
-void FModTier::ExecGetTechTier(UObject* Context, FFrame& Stack, RESULT_DECL)
+void FTidyMilestones::ExecGetTechTier(UObject* Context, FFrame& Stack, RESULT_DECL)
 {
 	P_GET_OBJECT(UClass, InClass);
 	P_FINISH;
@@ -273,7 +273,7 @@ void FModTier::ExecGetTechTier(UObject* Context, FFrame& Stack, RESULT_DECL)
 }
 
 // int32 AFGSchematicManager::GetHighestAvailableTechTier()
-void FModTier::ExecGetHighestAvailableTechTier(UObject* Context, FFrame& Stack, RESULT_DECL)
+void FTidyMilestones::ExecGetHighestAvailableTechTier(UObject* Context, FFrame& Stack, RESULT_DECL)
 {
 	P_FINISH;
 	AFGSchematicManager* Manager = CastChecked<AFGSchematicManager>(Context);
@@ -287,7 +287,7 @@ void FModTier::ExecGetHighestAvailableTechTier(UObject* Context, FFrame& Stack, 
 }
 
 // static FText UKismetTextLibrary::Conv_IntToText( int32 Value, ... )
-void FModTier::ExecConvIntToText(UObject* Context, FFrame& Stack, RESULT_DECL)
+void FTidyMilestones::ExecConvIntToText(UObject* Context, FFrame& Stack, RESULT_DECL)
 {
 	const bool bTierButton = CachedModTier != INDEX_NONE && CachedManager.IsValid() && IsCalledBy(Stack, TierButtonClassName);
 	OriginalConvIntToText(Context, Stack, RESULT_PARAM);
@@ -303,7 +303,7 @@ void FModTier::ExecConvIntToText(UObject* Context, FFrame& Stack, RESULT_DECL)
 }
 
 // UHorizontalBoxSlot* UHorizontalBox::AddChildToHorizontalBox( UWidget* Content )
-void FModTier::ExecAddChildToHorizontalBox(UObject* Context, FFrame& Stack, RESULT_DECL)
+void FTidyMilestones::ExecAddChildToHorizontalBox(UObject* Context, FFrame& Stack, RESULT_DECL)
 {
 	const bool bTierList = CachedModTier != INDEX_NONE && Context && Context->GetFName() == TierListName && IsCalledBy(Stack, HubClassName);
 	OriginalAddChildToHorizontalBox(Context, Stack, RESULT_PARAM);
@@ -327,7 +327,7 @@ void FModTier::ExecAddChildToHorizontalBox(UObject* Context, FFrame& Stack, RESU
 	}
 }
 
-void FModTier::MoveModTierButtonToFront(UHorizontalBox* TierList)
+void FTidyMilestones::MoveModTierButtonToFront(UHorizontalBox* TierList)
 {
 	// The HUB finds a tier's button by its position in the list, so the order stays as it is and
 	// the buttons are only drawn somewhere else: the last one first, the others one place further.
@@ -362,7 +362,7 @@ void FModTier::MoveModTierButtonToFront(UHorizontalBox* TierList)
 // Mod config
 // ---------------------------------------------------------------------------
 
-void FModTier::RegisterConfig(UGameInstance* GameInstance)
+void FTidyMilestones::RegisterConfig(UGameInstance* GameInstance)
 {
 	if (!GameInstance || ConfigManager.IsValid())
 	{
@@ -371,19 +371,19 @@ void FModTier::RegisterConfig(UGameInstance* GameInstance)
 	UConfigManager* Manager = GameInstance->GetSubsystem<UConfigManager>();
 	if (!Manager)
 	{
-		UE_LOG(LogModTier, Error, TEXT("SML config manager not found; using default settings"));
+		UE_LOG(LogTidyMilestones, Error, TEXT("SML config manager not found; using default settings"));
 		return;
 	}
-	UModTierConfig::UseMenuWidgets();
-	Manager->RegisterModConfiguration(UModTierConfig::StaticClass());
+	UTidyMilestonesConfig::UseMenuWidgets();
+	Manager->RegisterModConfiguration(UTidyMilestonesConfig::StaticClass());
 	ConfigManager = Manager;
 	RefreshSettings();
 }
 
-void FModTier::RefreshSettings()
+void FTidyMilestones::RefreshSettings()
 {
 	UConfigManager* Manager = ConfigManager.Get();
-	const UConfigPropertySection* Root = Manager ? Manager->GetConfigurationRootSection(UModTierConfig::GetId()) : nullptr;
+	const UConfigPropertySection* Root = Manager ? Manager->GetConfigurationRootSection(UTidyMilestonesConfig::GetId()) : nullptr;
 	if (!Root)
 	{
 		return; // defaults stay
@@ -394,22 +394,23 @@ void FModTier::RefreshSettings()
 		const UConfigPropertyBool* Bool = Property ? Cast<UConfigPropertyBool>(Property->Get()) : nullptr;
 		return Bool ? Bool->Value : bFallback;
 	};
-	bTabEnabled = GetBool(UModTierConfig::TabKey, true);
-	bUnlockAllAtOnce = GetBool(UModTierConfig::ShowAllKey, false);
-	FModTierOverrides::SetEnabled(GetBool(UModTierConfig::OverridesKey, true));
-	bTierOnLeft = GetBool(UModTierConfig::LeftKey, true);
+	bTabEnabled = GetBool(UTidyMilestonesConfig::TabKey, true);
+	bUnlockAllAtOnce = GetBool(UTidyMilestonesConfig::ShowAllKey, false);
+	FTidyMilestonesOverrides::SetEnabled(GetBool(UTidyMilestonesConfig::OverridesKey, true));
+	FTidyMilestonesOverrides::SetPresetEnabled(GetBool(UTidyMilestonesConfig::PresetKey, false));
+	bTierOnLeft = GetBool(UTidyMilestonesConfig::LeftKey, true);
 
-	const TObjectPtr<UConfigProperty>* LabelProperty = Root->SectionProperties.Find(UModTierConfig::LabelKey);
+	const TObjectPtr<UConfigProperty>* LabelProperty = Root->SectionProperties.Find(UTidyMilestonesConfig::LabelKey);
 	const UConfigPropertyString* Label = LabelProperty ? Cast<UConfigPropertyString>(LabelProperty->Get()) : nullptr;
-	TierLabel = Label ? Label->Value.TrimStartAndEnd() : UModTierConfig::DefaultLabel;
+	TierLabel = Label ? Label->Value.TrimStartAndEnd() : UTidyMilestonesConfig::DefaultLabel;
 	if (TierLabel.IsEmpty())
 	{
-		TierLabel = UModTierConfig::DefaultLabel; // a button with nothing on it helps nobody
+		TierLabel = UTidyMilestonesConfig::DefaultLabel; // a button with nothing on it helps nobody
 	}
 
-	const TObjectPtr<UConfigProperty>* KeyProperty = Root->SectionProperties.Find(UModTierConfig::EditorKeyKey);
+	const TObjectPtr<UConfigProperty>* KeyProperty = Root->SectionProperties.Find(UTidyMilestonesConfig::EditorKeyKey);
 	const UConfigPropertyInteger* Key = KeyProperty ? Cast<UConfigPropertyInteger>(KeyProperty->Get()) : nullptr;
 	const int32 KeyValue = Key ? Key->Value : 0;
-	EditorKeyChoice = KeyValue >= 0 && KeyValue <= static_cast<int32>(EModTierEditorKey::Off)
-		? static_cast<EModTierEditorKey>(KeyValue) : EModTierEditorKey::CtrlShiftM;
+	EditorKeyChoice = KeyValue >= 0 && KeyValue <= static_cast<int32>(ETidyMilestonesEditorKey::Off)
+		? static_cast<ETidyMilestonesEditorKey>(KeyValue) : ETidyMilestonesEditorKey::CtrlShiftM;
 }

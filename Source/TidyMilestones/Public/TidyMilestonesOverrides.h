@@ -5,7 +5,7 @@
 class UTexture2D;
 
 /** The kinds of thing whose name and icon can be replaced. */
-enum class EModTierTargetKind : uint8
+enum class ETidyMilestonesTargetKind : uint8
 {
 	Milestone,
 	Research, // MAM research and MAM trees
@@ -14,13 +14,13 @@ enum class EModTierTargetKind : uint8
 };
 
 /** One thing whose name and icon can be replaced. */
-struct FModTierTarget
+struct FTidyMilestonesTarget
 {
 	TWeakObjectPtr<UClass> Class;
 	FString Path;
 	/** The mod it comes from (the root of its path); empty for the base game. */
 	FString Mod;
-	EModTierTargetKind Kind = EModTierTargetKind::Other;
+	ETidyMilestonesTargetKind Kind = ETidyMilestonesTargetKind::Other;
 };
 
 /**
@@ -29,12 +29,12 @@ struct FModTierTarget
  * which is where the menus of the game read them from. Nothing is stored in the save game, and
  * in multiplayer every player sees their own replacements.
  *
- * Files, in <game>/FactoryGame/Configs/ModTier/:
+ * Files, in <game>/FactoryGame/Configs/TidyMilestones/:
  *   Overrides.json  the replacements
  *   Icons/          PNG files of the player
  *   Targets.txt     written by the mod: everything from mods that can be replaced
  */
-class FModTierOverrides
+class FTidyMilestonesOverrides
 {
 public:
 	/** Reads Overrides.json and applies it. Safe to call again: earlier replacements are undone first. */
@@ -43,8 +43,11 @@ public:
 	/** Off: everything shows the name and icon it came with. The replacements are kept. */
 	static void SetEnabled(bool bInEnabled);
 
+	/** On: Aetherosz's names (a preset compiled into the mod) apply under the player's own replacements. Off by default. */
+	static void SetPresetEnabled(bool bInEnabled);
+
 	/** Everything loaded whose name and icon can be replaced. */
-	static void GatherTargets(TArray<TSharedPtr<FModTierTarget>>& Out);
+	static void GatherTargets(TArray<TSharedPtr<FTidyMilestonesTarget>>& Out);
 
 	/** The name and icon a target shows now. */
 	static FText GetDisplayName(const UClass* Class);
@@ -74,6 +77,9 @@ private:
 	};
 
 	static void Load();
+	/** Reads {"overrides": [{"target", "name", "icon"}]}. False if the text is not valid JSON. */
+	static bool ParseOverrides(const FString& Text, TArray<FOverride>& Out);
+	static void ApplyList(const TArray<FOverride>& List, const TCHAR* What, bool bIsPreset);
 	static void Save();
 	static void WriteTargets();
 	static FOverride& FindOrAddOverride(const FString& Target);
@@ -89,7 +95,10 @@ private:
 	static void SetIcon(UObject* DefaultObject, UTexture2D* Icon);
 
 	static TArray<FOverride> Overrides;
+	/** Aetherosz's names, from AetheroszNames.inl. Never written to Overrides.json. */
+	static TArray<FOverride> PresetOverrides;
 	static bool bEnabled;
+	static bool bPresetEnabled;
 	/** True once a save has been loaded: before that nothing is applied. */
 	static bool bHasApplied;
 };
